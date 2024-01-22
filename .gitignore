@@ -2,3 +2,6 @@
 /.env
 .env
 Dockerfile
+cache.json
+/cache.json
+./cache.json
