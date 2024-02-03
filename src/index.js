@@ -6,7 +6,15 @@ import { PORT, LIMIT_TIMEOUT_MAX, LIMIT_MAX } from './global.js';
 import logger from './logger.js';
 import rateLimit from 'express-rate-limit';
 
+const app = express();
+
+app.set('trust proxy', 1);
+
 dotenv.config();
+
+app.use(cors());
+app.use(express.json());
+app.use('/', router);
 
 const limiter = rateLimit({
   windowMs: LIMIT_TIMEOUT_MAX, // xx minutes
@@ -15,11 +23,7 @@ const limiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
-const app = express();
-app.use(cors());
 app.use(limiter);
-app.use(express.json());
-app.use('/', router);
 
 app.listen(PORT, () => {
   logger.info(`Server running on port: ${PORT}`);
