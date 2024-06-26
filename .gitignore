@@ -1,6 +1,7 @@
 /node_modules
 /.env
 .env
+env
 Dockerfile
 cache.json
 /cache.json
