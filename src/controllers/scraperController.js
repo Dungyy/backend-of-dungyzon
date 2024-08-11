@@ -66,23 +66,39 @@ export const getProductDetails = async (req, res) => {
     return res.status(400).json({ message: error.details[0].message });
   }
 
-  const cacheKey = `product:${productId}:details`;
-  let productDetails = cache.get(cacheKey);
+  const cacheKey = `product:${productId}:full`;
+  let fullProductInfo = cache.get(cacheKey);
 
-  if (!productDetails) {
+  if (!fullProductInfo) {
     try {
-      productDetails = await fetchData(`${BASE_URL}&url=https://www.amazon.com/dp/${productId}`);
-      cache.set(cacheKey, productDetails, 3600); // Cache for 1 hour
-      logger.info(`Product details fetched and cached: ${productId}`);
+      const [details, reviews, offers] = await Promise.all([
+        fetchData(`${BASE_URL}&url=https://www.amazon.com/dp/${productId}`),
+        fetchData(`${BASE_URL}&url=https://www.amazon.com/product-reviews/${productId}`),
+        fetchData(`${BASE_URL}&url=https://www.amazon.com/gp/offer-listing/${productId}`)
+      ]);
+
+      fullProductInfo = {
+        details,
+        reviews,
+        offers
+      };
+
+      cache.set(cacheKey, fullProductInfo, 3600); // Cache for 1 hour
+      logger.info(`Full product info fetched and cached: ${productId}`);
+
+      // Cache individual components as well
+      cache.set(`product:${productId}:details`, details, 3600);
+      cache.set(`product:${productId}:reviews`, reviews, 3600);
+      cache.set(`product:${productId}:offers`, offers, 3600);
     } catch (error) {
       logger.error(`Error on getProductDetails, Product ID: ${productId}, Error: ${error.message}`);
       return res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }
   } else {
-    logger.info(`Product details retrieved from cache: ${productId}`);
+    logger.info(`Full product info retrieved from cache: ${productId}`);
   }
 
-  res.json(productDetails);
+  res.json(fullProductInfo);
 };
 
 export const getProductReviews = async (req, res) => {
@@ -97,16 +113,13 @@ export const getProductReviews = async (req, res) => {
   let reviews = cache.get(cacheKey);
 
   if (!reviews) {
-    try {
-      reviews = await fetchData(`${BASE_URL}&url=https://www.amazon.com/product-reviews/${productId}`);
-      cache.set(cacheKey, reviews, 3600); // Cache for 1 hour
-      logger.info(`Product reviews fetched and cached: ${productId}`);
-    } catch (error) {
-      logger.error(`Error on getProductReviews, Product ID: ${productId}, Error: ${error.message}`);
-      return res.status(500).json({ message: 'Internal Server Error', error: error.message });
-    }
-  } else {
-    logger.info(`Product reviews retrieved from cache: ${productId}`);
+    // If not in cache, fetch full product info which will cache reviews
+    await getProductDetails({ params: { productId } }, { json: () => {} });
+    reviews = cache.get(cacheKey);
+  }
+
+  if (!reviews) {
+    return res.status(500).json({ message: 'Failed to fetch reviews' });
   }
 
   res.json(reviews);
@@ -124,16 +137,13 @@ export const getProductOffers = async (req, res) => {
   let offers = cache.get(cacheKey);
 
   if (!offers) {
-    try {
-      offers = await fetchData(`${BASE_URL}&url=https://www.amazon.com/gp/offer-listing/${productId}`);
-      cache.set(cacheKey, offers, 3600); // Cache for 1 hour
-      logger.info(`Product offers fetched and cached: ${productId}`);
-    } catch (error) {
-      logger.error(`Error on getProductOffers, Product ID: ${productId}, Error: ${error.message}`);
-      return res.status(500).json({ message: 'Internal Server Error', error: error.message });
-    }
-  } else {
-    logger.info(`Product offers retrieved from cache: ${productId}`);
+    // If not in cache, fetch full product info which will cache offers
+    await getProductDetails({ params: { productId } }, { json: () => {} });
+    offers = cache.get(cacheKey);
+  }
+
+  if (!offers) {
+    return res.status(500).json({ message: 'Failed to fetch offers' });
   }
 
   res.json(offers);
