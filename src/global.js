@@ -1,8 +1,11 @@
 import dotenv from 'dotenv';
+import NodeCache from 'node-cache';
 
 dotenv.config();
 
-const API_KEY = process.env.API_KEY;
+export const cache = new NodeCache({ stdTTL: 3600, checkperiod: 120 });
+
+ const API_KEY = process.env.API_KEY;
 
 export const IS_PROD = !(
   process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
