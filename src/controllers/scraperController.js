@@ -7,9 +7,11 @@ export const getWelcomeMessage = (req, res) => {
   res.send("Welcome to Dungy's Amazon Scraper API");
 };
 
+// Search for products
 export const getSearchResults = async (req, res) => {
   const { searchQuery } = req.params;
-  
+
+  // Validate the search query
   const { error } = validateSearchQuery(searchQuery);
   if (error) {
     logger.error(`Invalid search query: "${searchQuery}". Error: ${error.details[0].message}`);
@@ -25,7 +27,7 @@ export const getSearchResults = async (req, res) => {
       searchResults = await fetchData(
         `${BASE_URL}&url=https://www.amazon.com/s?k=${encodeURIComponent(searchQuery)}`
       );
-      
+
       if (searchResults && searchResults.results && searchResults.results.length > 0) {
         // Cache the entire search results
         cache.set(cacheKey, searchResults, 3600); // Cache for 1 hour
@@ -35,10 +37,10 @@ export const getSearchResults = async (req, res) => {
           const productCacheKey = `product:${product.asin}:basic`;
           cache.set(productCacheKey, {
             asin: product.asin,
-            title: product.title,
-            price: product.price,
-            rating: product.rating,
-            thumbnail: product.thumbnail
+            title: product.name, 
+            price: product.price, 
+            rating: product.stars, 
+            thumbnail: product.image 
           }, 3600); // Cache for 1 hour
         });
 
