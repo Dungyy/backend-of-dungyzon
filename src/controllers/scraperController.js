@@ -12,6 +12,7 @@ export const getSearchResults = async (req, res) => {
   
   const { error } = validateSearchQuery(searchQuery);
   if (error) {
+    logger.error(`Invalid search query: "${searchQuery}". Error: ${error.details[0].message}`);
     return res.status(400).json({ message: error.details[0].message });
   }
 
@@ -20,6 +21,7 @@ export const getSearchResults = async (req, res) => {
 
   if (!searchResults) {
     try {
+      logger.info(`Fetching search results for query: "${searchQuery}"`);
       searchResults = await fetchData(
         `${BASE_URL}&url=https://www.amazon.com/s?k=${encodeURIComponent(searchQuery)}`
       );
@@ -40,16 +42,17 @@ export const getSearchResults = async (req, res) => {
           }, 3600); // Cache for 1 hour
         });
 
-        logger.info(`Search performed and cached: ${searchQuery}, Results: ${searchResults.results.length}`);
+        logger.info(`Search performed and cached for query: "${searchQuery}". Results: ${searchResults.results.length}`);
       } else {
+        logger.info(`No products found for search query: "${searchQuery}"`);
         return res.status(404).json({ message: 'No products found' });
       }
     } catch (error) {
-      logger.error(`Error on getSearchResults, Search Query: ${searchQuery}, Error: ${error.message}`);
+      logger.error(`Error on getSearchResults. Search Query: "${searchQuery}", Error: ${error.message}`);
       return res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }
   } else {
-    logger.info(`Search results retrieved from cache: ${searchQuery}`);
+    logger.info(`Search results retrieved from cache for query: "${searchQuery}"`);
   }
 
   res.json({
@@ -63,6 +66,7 @@ export const getProductDetails = async (req, res) => {
 
   const { error } = validateProductId(productId);
   if (error) {
+    logger.error(`Invalid product ID: "${productId}". Error: ${error.details[0].message}`);
     return res.status(400).json({ message: error.details[0].message });
   }
 
@@ -71,6 +75,7 @@ export const getProductDetails = async (req, res) => {
 
   if (!fullProductInfo) {
     try {
+      logger.info(`Fetching full product info for product ID: "${productId}"`);
       const [details, reviews, offers] = await Promise.all([
         fetchData(`${BASE_URL}&url=https://www.amazon.com/dp/${productId}`),
         fetchData(`${BASE_URL}&url=https://www.amazon.com/product-reviews/${productId}`),
@@ -84,18 +89,18 @@ export const getProductDetails = async (req, res) => {
       };
 
       cache.set(cacheKey, fullProductInfo, 3600); // Cache for 1 hour
-      logger.info(`Full product info fetched and cached: ${productId}`);
+      logger.info(`Full product info fetched and cached for product ID: "${productId}"`);
 
       // Cache individual components as well
       cache.set(`product:${productId}:details`, details, 3600);
       cache.set(`product:${productId}:reviews`, reviews, 3600);
       cache.set(`product:${productId}:offers`, offers, 3600);
     } catch (error) {
-      logger.error(`Error on getProductDetails, Product ID: ${productId}, Error: ${error.message}`);
+      logger.error(`Error on getProductDetails. Product ID: "${productId}", Error: ${error.message}`);
       return res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }
   } else {
-    logger.info(`Full product info retrieved from cache: ${productId}`);
+    logger.info(`Full product info retrieved from cache for product ID: "${productId}"`);
   }
 
   res.json(fullProductInfo);
@@ -106,6 +111,7 @@ export const getProductReviews = async (req, res) => {
 
   const { error } = validateProductId(productId);
   if (error) {
+    logger.error(`Invalid product ID for reviews: "${productId}". Error: ${error.details[0].message}`);
     return res.status(400).json({ message: error.details[0].message });
   }
 
@@ -113,15 +119,18 @@ export const getProductReviews = async (req, res) => {
   let reviews = cache.get(cacheKey);
 
   if (!reviews) {
+    logger.info(`Reviews not in cache for product ID: "${productId}". Fetching full product info.`);
     // If not in cache, fetch full product info which will cache reviews
     await getProductDetails({ params: { productId } }, { json: () => {} });
     reviews = cache.get(cacheKey);
   }
 
   if (!reviews) {
+    logger.error(`Failed to fetch reviews for product ID: "${productId}"`);
     return res.status(500).json({ message: 'Failed to fetch reviews' });
   }
 
+  logger.info(`Reviews retrieved for product ID: "${productId}"`);
   res.json(reviews);
 };
 
@@ -130,6 +139,7 @@ export const getProductOffers = async (req, res) => {
 
   const { error } = validateProductId(productId);
   if (error) {
+    logger.error(`Invalid product ID for offers: "${productId}". Error: ${error.details[0].message}`);
     return res.status(400).json({ message: error.details[0].message });
   }
 
@@ -137,15 +147,18 @@ export const getProductOffers = async (req, res) => {
   let offers = cache.get(cacheKey);
 
   if (!offers) {
+    logger.info(`Offers not in cache for product ID: "${productId}". Fetching full product info.`);
     // If not in cache, fetch full product info which will cache offers
     await getProductDetails({ params: { productId } }, { json: () => {} });
     offers = cache.get(cacheKey);
   }
 
   if (!offers) {
+    logger.error(`Failed to fetch offers for product ID: "${productId}"`);
     return res.status(500).json({ message: 'Failed to fetch offers' });
   }
 
+  logger.info(`Offers retrieved for product ID: "${productId}"`);
   res.json(offers);
 };
 
@@ -154,6 +167,7 @@ export const getQuickProductInfo = async (req, res) => {
 
   const { error } = validateProductId(productId);
   if (error) {
+    logger.error(`Invalid product ID for quick info: "${productId}". Error: ${error.details[0].message}`);
     return res.status(400).json({ message: error.details[0].message });
   }
 
@@ -166,6 +180,7 @@ export const getQuickProductInfo = async (req, res) => {
     const basicInfo = cache.get(basicInfoCacheKey);
 
     if (basicInfo) {
+      logger.info(`Basic info found in cache for product ID: "${productId}". Fetching reviews.`);
       // We have basic info, just fetch reviews
       try {
         const reviews = await fetchData(`${BASE_URL}&url=https://www.amazon.com/product-reviews/${productId}`);
@@ -178,12 +193,13 @@ export const getQuickProductInfo = async (req, res) => {
         };
 
         cache.set(cacheKey, quickInfo, 1800); // Cache quick info for 30 minutes
-        logger.info(`Quick product info assembled from basic cache and fetched reviews: ${productId}`);
+        logger.info(`Quick product info assembled from basic cache and fetched reviews for product ID: "${productId}"`);
       } catch (error) {
-        logger.error(`Error fetching reviews for quick info, Product ID: ${productId}, Error: ${error.message}`);
+        logger.error(`Error fetching reviews for quick info. Product ID: "${productId}", Error: ${error.message}`);
         return res.status(500).json({ message: 'Internal Server Error', error: error.message });
       }
     } else {
+      logger.info(`No basic info in cache for product ID: "${productId}". Fetching all data.`);
       // We don't have basic info, fetch everything
       try {
         const [details, reviews] = await Promise.all([
@@ -202,14 +218,14 @@ export const getQuickProductInfo = async (req, res) => {
         };
 
         cache.set(cacheKey, quickInfo, 1800); // Cache quick info for 30 minutes
-        logger.info(`Quick product info fetched and cached: ${productId}`);
+        logger.info(`Quick product info fetched and cached for product ID: "${productId}"`);
       } catch (error) {
-        logger.error(`Error on getQuickProductInfo, Product ID: ${productId}, Error: ${error.message}`);
+        logger.error(`Error on getQuickProductInfo. Product ID: "${productId}", Error: ${error.message}`);
         return res.status(500).json({ message: 'Internal Server Error', error: error.message });
       }
     }
   } else {
-    logger.info(`Quick product info retrieved from cache: ${productId}`);
+    logger.info(`Quick product info retrieved from cache for product ID: "${productId}"`);
   }
 
   res.json(quickInfo);
