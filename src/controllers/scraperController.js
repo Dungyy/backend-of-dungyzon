@@ -177,54 +177,28 @@ export const getQuickProductInfo = async (req, res) => {
   let quickInfo = cache.get(cacheKey);
 
   if (!quickInfo) {
-    // Check if we have basic info cached from search results
-    const basicInfoCacheKey = `product:${productId}:basic`;
-    const basicInfo = cache.get(basicInfoCacheKey);
+    logger.info(`Fetching quick product info for product ID: "${productId}"`);
+    try {
+      const [details, reviews] = await Promise.all([
+        fetchData(`${BASE_URL}&url=https://www.amazon.com/dp/${productId}`),
+        fetchData(`${BASE_URL}&url=https://www.amazon.com/product-reviews/${productId}`)
+      ]);
 
-    if (basicInfo) {
-      logger.info(`Basic info found in cache for product ID: "${productId}". Fetching reviews.`);
-      // We have basic info, just fetch reviews
-      try {
-        const reviews = await fetchData(`${BASE_URL}&url=https://www.amazon.com/product-reviews/${productId}`);
-        
-        quickInfo = {
-          ...basicInfo,
-          reviewsCount: reviews.reviews_count,
-          topPositiveReview: reviews.top_positive_review,
-          topCriticalReview: reviews.top_critical_review
-        };
+      quickInfo = {
+        productId,
+        title: details.name,
+        rating: details.rating,
+        price: details.price,
+        reviewsCount: reviews.reviews_count,
+        topPositiveReview: reviews.top_positive_review,
+        topCriticalReview: reviews.top_critical_review
+      };
 
-        cache.set(cacheKey, quickInfo, 1800); // Cache quick info for 30 minutes
-        logger.info(`Quick product info assembled from basic cache and fetched reviews for product ID: "${productId}"`);
-      } catch (error) {
-        logger.error(`Error fetching reviews for quick info. Product ID: "${productId}", Error: ${error.message}`);
-        return res.status(500).json({ message: 'Internal Server Error', error: error.message });
-      }
-    } else {
-      logger.info(`No basic info in cache for product ID: "${productId}". Fetching all data.`);
-      // We don't have basic info, fetch everything
-      try {
-        const [details, reviews] = await Promise.all([
-          fetchData(`${BASE_URL}&url=https://www.amazon.com/dp/${productId}`),
-          fetchData(`${BASE_URL}&url=https://www.amazon.com/product-reviews/${productId}`)
-        ]);
-
-        quickInfo = {
-          productId,
-          title: details.name,
-          rating: details.rating,
-          price: details.price,
-          reviewsCount: reviews.reviews_count,
-          topPositiveReview: reviews.top_positive_review,
-          topCriticalReview: reviews.top_critical_review
-        };
-
-        cache.set(cacheKey, quickInfo, 1800); // Cache quick info for 30 minutes
-        logger.info(`Quick product info fetched and cached for product ID: "${productId}"`);
-      } catch (error) {
-        logger.error(`Error on getQuickProductInfo. Product ID: "${productId}", Error: ${error.message}`);
-        return res.status(500).json({ message: 'Internal Server Error', error: error.message });
-      }
+      cache.set(cacheKey, quickInfo, 1800); // Cache quick info for 30 minutes
+      logger.info(`Quick product info fetched and cached for product ID: "${productId}"`);
+    } catch (error) {
+      logger.error(`Error on getQuickProductInfo. Product ID: "${productId}", Error: ${error.message}`);
+      return res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }
   } else {
     logger.info(`Quick product info retrieved from cache for product ID: "${productId}"`);
