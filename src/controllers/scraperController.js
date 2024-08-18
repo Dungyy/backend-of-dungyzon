@@ -30,7 +30,7 @@ export const getSearchResults = async (req, res) => {
 
       if (searchResults && searchResults.results && searchResults.results.length > 0) {
         // Cache the entire search results
-        cache.set(cacheKey, searchResults, 3600); // Cache for 1 hour
+        cache.set(cacheKey, searchResults, 43200); // Cache for 12 hour
 
         // Cache individual product basic info
         searchResults.results.forEach(product => {
@@ -41,7 +41,7 @@ export const getSearchResults = async (req, res) => {
             price: product.price, 
             rating: product.stars, 
             thumbnail: product.image 
-          }, 3600); // Cache for 1 hour
+          }, 43200); // Cache for 12 hour
         });
 
         logger.info(`Search performed and cached for query: "${searchQuery}". Results: ${searchResults.results.length}`);
@@ -90,13 +90,13 @@ export const getProductDetails = async (req, res) => {
         offers
       };
 
-      cache.set(cacheKey, fullProductInfo, 3600); // Cache for 1 hour
+      cache.set(cacheKey, fullProductInfo, 43200); // Cache for 12 hour
       logger.info(`Full product info fetched and cached for product ID: "${productId}"`);
 
       // Cache individual components as well
-      cache.set(`product:${productId}:details`, details, 3600);
-      cache.set(`product:${productId}:reviews`, reviews, 3600);
-      cache.set(`product:${productId}:offers`, offers, 3600);
+      cache.set(`product:${productId}:details`, details, 43200);
+      cache.set(`product:${productId}:reviews`, reviews, 43200);
+      cache.set(`product:${productId}:offers`, offers, 43200);
     } catch (error) {
       logger.error(`Error on getProductDetails. Product ID: "${productId}", Error: ${error.message}`);
       return res.status(500).json({ message: 'Internal Server Error', error: error.message });
@@ -194,7 +194,7 @@ export const getQuickProductInfo = async (req, res) => {
         topCriticalReview: reviews.top_critical_review
       };
 
-      cache.set(cacheKey, quickInfo, 1800); // Cache quick info for 30 minutes
+      cache.set(cacheKey, quickInfo, 43200); // Cache quick info for 12 hours (43200 seconds)
       logger.info(`Quick product info fetched and cached for product ID: "${productId}"`);
     } catch (error) {
       logger.error(`Error on getQuickProductInfo. Product ID: "${productId}", Error: ${error.message}`);

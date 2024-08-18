@@ -3,7 +3,7 @@ import NodeCache from 'node-cache';
 
 dotenv.config();
 
-export const cache = new NodeCache({ stdTTL: 3600, checkperiod: 120 });
+export const cache = new NodeCache({ stdTTL: 43200, checkperiod: 120 });
 
  const API_KEY = process.env.API_KEY;
 

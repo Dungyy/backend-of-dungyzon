@@ -13,7 +13,7 @@ const fetchData = async (url) => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       data = await response.json();
-      cache.set(cacheKey, data, 3600); // Cache for 1 hour
+      cache.set(cacheKey, data, 43200); // Cache quick info for 12 hours (43200 seconds)
       logger.info(`Data fetched and cached: ${url}`);
     } catch (error) {
       logger.error(`Error fetching data: ${error.message}`);
