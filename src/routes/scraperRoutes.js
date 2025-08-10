@@ -138,13 +138,13 @@ router.get('/products/:productId/reviews', getProductReviews);
 router.get('/products/:productId/offers', getProductOffers);
 
 /**
- * @route   GET /products/:productId/quick
- * @desc    Get quick product information (optimized for fast response)
+ * @route   GET /products/:productId/
+ * @desc    Get  product information (optimized for fast response)
  * @access  Public
  * @params  productId - Amazon ASIN or product ID
- * @example GET /products/B08N5WRWNW/quick
+ * @example GET /products/B08N5WRWNW/
  */
-router.get('/products/:productId/quick', getQuickProductInfo);
+router.get('/products/:productId/', getQuickProductInfo);
 
 // =============================================================================
 // ADMIN/MONITORING ROUTES (Consider adding authentication in production)
@@ -185,7 +185,7 @@ router.use('*', (req, res) => {
         'GET /products/:productId',
         'GET /products/:productId/reviews',
         'GET /products/:productId/offers',
-        'GET /products/:productId/quick',
+        'GET /products/:productId/',
         'GET /cache/stats',
         'DELETE /cache'
       ],

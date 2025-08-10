@@ -212,7 +212,7 @@ export const getProductReviews = async (req, res) => {
   }
   const asin = normalizeAsin(productId);
 
-  const cacheKey = `product:${asin}:reviews`;
+  const cacheKey = `product:${asin}`;
   const cached = cache.get(cacheKey);
   if (cached) {
     logger.info(`Reviews from cache: "${asin}"`);
@@ -221,7 +221,7 @@ export const getProductReviews = async (req, res) => {
 
   try {
     logger.info(`Fetching reviews: "${asin}"`);
-    const reviews = await tryRegions([`/product-reviews/${asin}`]);
+    const reviews = await tryRegions([`/product/${asin}`]);
     cache.set(cacheKey, reviews, 60 * 60 * 12);
     return res.json(reviews);
   } catch (err) {
@@ -436,7 +436,7 @@ export const useApiHealth = () => {
 
   const checkHealth = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/health`, {
+      const response = await fetch(`${BASE_URL}/health`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
