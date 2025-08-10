@@ -1,30 +1,50 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
 import router from './routes/scraperRoutes.js';
-import { PORT, LIMIT_TIMEOUT_MAX, LIMIT_MAX } from './global.js';
-import logger from './logger.js';
-import rateLimit from 'express-rate-limit';
 
 const app = express();
 
-app.set('trust proxy', 1);
+// Security middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
-dotenv.config();
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-app.use(cors());
-app.use(express.json());
+// Compression middleware
+app.use(compression());
+
+// Request logging
+app.use(morgan('combined'));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// API routes
 app.use('/', router);
 
-const limiter = rateLimit({
-  windowMs: LIMIT_TIMEOUT_MAX, // xx minutes
-  max: LIMIT_MAX, // Limit each IP to xx requests per windowMs
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+// Health check at root
+app.get('/health', (req, res) => {
+  res.json({ message: 'API is healthy' });
 });
 
-app.use(limiter);
-
+// Start server
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  logger.info(`Server running on port: ${PORT}`);
+  console.log(`🚀 Dungyzon API Server running on port ${PORT}`);
+  console.log(`📍 API Base URL: http://localhost:${PORT}/api`);
+  console.log(`🔍 Health Check: http://localhost:${PORT}/api/health`);
+  console.log(`📊 Cache Stats: http://localhost:${PORT}/api/cache/stats`);
 });
+
+export default app;
