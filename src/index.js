@@ -35,7 +35,7 @@ app.use('/', router);
 
 // Health check at root
 app.get('/health', (req, res) => {
-  res.json({ message: 'API is healthy' });
+  res.status(200).json({ message: 'API is healthy' });
 });
 
 // Start server
